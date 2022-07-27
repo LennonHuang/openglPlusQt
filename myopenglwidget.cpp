@@ -1,12 +1,16 @@
 #include "myopenglwidget.h"
+#include <glm/common.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 const char *vss = "#version 140\n"
     "in vec3 aPos;\n"
     "in vec3 aColour;\n"
+    "uniform mat4 transform;\n"
     "out vec3 vertexColor;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "   gl_Position = transform*vec4(aPos, 1.0);\n"
     "   vertexColor = aColour;\n"
     "}\0";
 
@@ -26,6 +30,7 @@ myopenglwidget::myopenglwidget(QWidget *parent)
 myopenglwidget::~myopenglwidget(){
     if(shaderProgram!=nullptr){
         vbo.destroy();
+        vao.destroy();
         delete  shaderProgram;
         shaderProgram = nullptr;
     }
@@ -96,10 +101,19 @@ void myopenglwidget::paintGL()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
+    //transform matrix
+    glm::mat4 trans = glm::mat4(1.0f);
+    static float yaw = 0.0;
+    trans = glm::rotate(trans, (float)glm::radians(yaw++), glm::vec3(0.0f, 0.0f, 1.0f));
+
+
     //Binding vao
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
     shaderProgram->bind();
+    unsigned int transID = glGetUniformLocation(shaderProgram->programId(), "transform");
+    glUniformMatrix4fv(transID, 1, GL_FALSE, glm::value_ptr(trans));
     glDrawArrays(GL_POINTS, 0, 3);
+
     shaderProgram->release();
 }
 
