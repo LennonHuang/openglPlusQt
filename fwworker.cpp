@@ -252,23 +252,23 @@ void mouseCallback(GLFWwindow *window, double xpos, double ypos)
         //left press
         pitch += dy*resolution*pitchresolution;
         yaw -= dx*resolution*yawresolution;
-        if(pitch < 5.0){pitch = 5.0;}else if(pitch > 90.0){ pitch = 90.0;}
+        if(pitch < 5.0){pitch = 5.0;}else if(pitch > 179.0){ pitch = 179.0;}
         camRight.x = sin(glm::radians(yaw));
         camRight.y = cos(glm::radians(yaw));
-        cameraPos = glm::vec3(camDis * cos(glm::radians(pitch)) * cos(glm::radians(yaw)),
-                              camDis * cos(glm::radians(pitch)) * sin(glm::radians(yaw)),
+        cameraPos = glm::vec3(camDis * cos(glm::radians(pitch)) * cos(glm::radians(-yaw)),
+                              camDis * cos(glm::radians(pitch)) * sin(glm::radians(-yaw)),
                               camDis * sin(glm::radians(pitch)));
         camPointDir = glm::normalize( -cameraPos + cameraTarget);//target always vec3(0,0,0) for now
-        camUp = glm::cross(camRight, camPointDir);
+        camUp = glm::normalize(glm::cross(camRight, camPointDir));
 
-//        //Debug print
-//        qDebug() << "*******************";
-//        qDebug() << "yaw: " << yaw;
-//        qDebug() << "pitch: " << pitch;
-//        qDebug() << "cam pos: " << QString::fromStdString(glm::to_string(cameraPos));
-//        qDebug() << "cam right: " << QString::fromStdString(glm::to_string(camRight));
-//        qDebug() << "cam up: " << QString::fromStdString(glm::to_string(camUp));
-//        qDebug() << "*******************";
+        //Debug print
+        qDebug() << "*******************";
+        qDebug() << "yaw: " << yaw;
+        qDebug() << "pitch: " << pitch;
+        qDebug() << "cam pos: " << QString::fromStdString(glm::to_string(cameraPos));
+        qDebug() << "cam right: " << QString::fromStdString(glm::to_string(camRight));
+        qDebug() << "cam up: " << QString::fromStdString(glm::to_string(camUp));
+        qDebug() << "*******************";
     }
     xLast = xpos;
     yLast = ypos;
