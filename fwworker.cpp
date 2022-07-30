@@ -1,10 +1,18 @@
 #include "fwworker.h"
 #include <QDebug>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/io.hpp>
+#include <iostream>
 
 // camera
-glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
-glm::vec3 cameraDir = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+float camDis = 3.0;
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  camDis);
+glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 camPointDir = glm::normalize( - cameraPos + cameraTarget);
+glm::vec3 camRight = glm::vec3(0.0, 1.0, 0.0);
+glm::vec3 camUp    = glm::cross(camRight, camPointDir);
+
 float fov = 45.0;
 void mouseCallback(GLFWwindow *window, double xpos, double ypos);
 void scollCallback(GLFWwindow* window, double xoffset, double yoffset);
@@ -56,7 +64,9 @@ fwWorker::fwWorker(QObject *parent) : QObject(parent)
 void fwWorker::run()
 {
     qDebug() << "openning glfw window";
-
+    qDebug() << "cam point dir: " << QString::fromStdString(glm::to_string(camPointDir));
+    qDebug() << "cam right: " << QString::fromStdString(glm::to_string(camRight));
+    qDebug() << "cam up: " << QString::fromStdString(glm::to_string(camUp));
     //init
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -163,7 +173,7 @@ void fwWorker::run()
 
     //view, camera
     glm::mat4 view(1.0f);
-    view = glm::lookAt(cameraPos, cameraPos + cameraDir, cameraUp);
+    view = glm::lookAt(cameraPos, cameraTarget, camUp);
     unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -188,7 +198,7 @@ void fwWorker::run()
         glUseProgram(shaderProgram);
         //view, camera
         glm::mat4 view(1.0f);
-        view = glm::lookAt(cameraPos, cameraPos + cameraDir, cameraUp);
+        view = glm::lookAt(cameraPos, cameraTarget, camUp);
         unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         //projection
@@ -220,25 +230,45 @@ void mouseCallback(GLFWwindow *window, double xpos, double ypos)
 {
     static double xLast, yLast;
     static double yaw = 0;
+    static double pitch = 90;
     if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE){
+        //mouse release mode
+        //record last position
         xLast = xpos;
         yLast = ypos;
         return;
     }
     //Holding, catch deltax and deltay
-    double resolution = 0.01;
-    double rotresolution = 0.1;
-    double deltax = (xpos - xLast)*resolution;
-    double deltay = (yLast - ypos)*resolution;
-    double rdeltax = (xpos - xLast)*rotresolution;
-    double rdeltay = (yLast - ypos)*rotresolution;
+    double resolution = 0.1;
+    double yawresolution = 2.0;
+    double pitchresolution = 1.0;
+    double dx = xpos - xLast;
+    double dy = ypos - yLast;
+
     if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS){
-        cameraPos.x += deltax;
-        cameraPos.y += deltay;
+        //right press
+
     }else if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
-        yaw += rdeltax;
-        cameraUp.y = cos(glm::radians(yaw));
-        cameraUp.x = sin(glm::radians(yaw));
+        //left press
+        pitch += dy*resolution*pitchresolution;
+        yaw -= dx*resolution*yawresolution;
+        if(pitch < 5.0){pitch = 5.0;}else if(pitch > 90.0){ pitch = 90.0;}
+        camRight.x = sin(glm::radians(yaw));
+        camRight.y = cos(glm::radians(yaw));
+        cameraPos = glm::vec3(camDis * cos(glm::radians(pitch)) * cos(glm::radians(yaw)),
+                              camDis * cos(glm::radians(pitch)) * sin(glm::radians(yaw)),
+                              camDis * sin(glm::radians(pitch)));
+        camPointDir = glm::normalize( -cameraPos + cameraTarget);//target always vec3(0,0,0) for now
+        camUp = glm::cross(camRight, camPointDir);
+
+//        //Debug print
+//        qDebug() << "*******************";
+//        qDebug() << "yaw: " << yaw;
+//        qDebug() << "pitch: " << pitch;
+//        qDebug() << "cam pos: " << QString::fromStdString(glm::to_string(cameraPos));
+//        qDebug() << "cam right: " << QString::fromStdString(glm::to_string(camRight));
+//        qDebug() << "cam up: " << QString::fromStdString(glm::to_string(camUp));
+//        qDebug() << "*******************";
     }
     xLast = xpos;
     yLast = ypos;
